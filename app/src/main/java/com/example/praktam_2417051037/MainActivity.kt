@@ -6,14 +6,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,21 +45,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PrakTAM_2417051037Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    HalamanTopBahasaBerwarna(
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                DaftarBahasaScreen()
             }
         }
     }
 }
 
 @Composable
-fun HalamanTopBahasaBerwarna(modifier: Modifier = Modifier) {
+fun DaftarBahasaScreen(modifier: Modifier = Modifier) {
     val data = LanguageSource.dummyLanguage
 
-    // Background gradient lembut
     val bg = Brush.verticalGradient(
         colors = listOf(
             Color(0xFFEEF6FF),
@@ -58,40 +63,33 @@ fun HalamanTopBahasaBerwarna(modifier: Modifier = Modifier) {
         )
     )
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(bg)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        HeaderTopBahasa()
 
-            // ===== HEADER =====
-            item {
-                HeaderTopBahasa()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        data.forEachIndexed { index, item ->
+            val accent = when (index) {
+                0 -> Color(0xFF3B82F6)
+                1 -> Color(0xFFF59E0B)
+                else -> Color(0xFF22C55E)
             }
 
-            // ===== LIST =====
-            itemsIndexed(data) { index, item ->
-                val accent = when (index) {
-                    0 -> Color(0xFF3B82F6) // Biru
-                    1 -> Color(0xFFF59E0B) // Oranye
-                    else -> Color(0xFF22C55E) // Hijau
-                }
+            DetailBahasaScreen(
+                nomor = index + 1,
+                nama = item.nama,
+                deskripsi = item.deskripsi,
+                imageRes = item.imageRes,
+                accentColor = accent
+            )
 
-                LanguageCardBerwarna(
-                    nomor = index + 1,
-                    nama = item.nama,
-                    deskripsi = item.deskripsi,
-                    imageRes = item.imageRes,
-                    accentColor = accent
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -108,13 +106,12 @@ fun HeaderTopBahasa() {
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Belajar coding dari yang paling populer 🚀",
+            text = "Belajar coding dari bahasa yang paling populer 🚀",
             style = MaterialTheme.typography.bodyMedium
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Badge kecil
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(999.dp))
@@ -122,7 +119,7 @@ fun HeaderTopBahasa() {
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text(
-                text = "Beginner Friendly ✨",
+                text = "Cocok Untuk Pemula ✨",
                 color = Color.White,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold
@@ -132,7 +129,7 @@ fun HeaderTopBahasa() {
 }
 
 @Composable
-fun LanguageCardBerwarna(
+fun DetailBahasaScreen(
     nomor: Int,
     nama: String,
     deskripsi: String,
@@ -147,7 +144,6 @@ fun LanguageCardBerwarna(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
-            // Gambar
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = nama,
@@ -157,13 +153,11 @@ fun LanguageCardBerwarna(
                 contentScale = ContentScale.Crop
             )
 
-            // Isi card
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp)
             ) {
-                // Baris judul + badge nomor
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -198,6 +192,20 @@ fun LanguageCardBerwarna(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF374151)
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = { },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                ) {
+                    Text(
+                        text = "Pelajari Sekarang",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -205,8 +213,8 @@ fun LanguageCardBerwarna(
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTopBahasaBerwarna() {
+fun DaftarBahasaPreview() {
     PrakTAM_2417051037Theme {
-        HalamanTopBahasaBerwarna()
+        DaftarBahasaScreen()
     }
 }
