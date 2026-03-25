@@ -5,246 +5,200 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.praktam_2417051037.model.LanguageSource
-import com.example.praktam_2417051037.ui.theme.PrakTAM_2417051037Theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PrakTAM_2417051037Theme {
-                DaftarBahasaScreen()
+            MaterialTheme {
+                BahasaApp()
             }
         }
     }
 }
 
-@Composable
-fun DaftarBahasaScreen(modifier: Modifier = Modifier) {
-    val data = LanguageSource.dummyLanguage
+data class Language(
+    val nama: String,
+    val deskripsi: String,
+    val kategori: String,
+    val imageRes: Int
+)
 
-    val bg = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFFEEF6FF),
-            Color(0xFFFFF3E6),
-            Color(0xFFF2FFF0)
-        )
+val dummyLanguage = listOf(
+    Language(
+        "Kotlin",
+        "Bahasa modern untuk Android.",
+        "Mobile",
+        R.drawable.gambarcoding1
+    ),
+    Language(
+        "Java",
+        "Bahasa OOP populer.",
+        "Programming",
+        R.drawable.gambarcoding2
+    ),
+    Language(
+        "Python",
+        "Bahasa simpel untuk AI dan data.",
+        "General",
+        R.drawable.gambarcoding3
+    ),
+    Language(
+        "JavaScript",
+        "Untuk web interaktif.",
+        "Web",
+        R.drawable.gambarcoding1
+    ),
+    Language(
+        "C++",
+        "Untuk sistem dan game.",
+        "System",
+        R.drawable.gambarcoding2
     )
+)
 
-    Column(
-        modifier = modifier
+@Composable
+fun BahasaApp() {
+    LazyColumn(
+        modifier = Modifier
             .fillMaxSize()
-            .background(bg)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .statusBarsPadding(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        HeaderTopBahasa()
+        item {
+            Text(
+                "Rekomendasi Populer",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        data.forEachIndexed { index, item ->
-            val accent = when (index) {
-                0 -> Color(0xFF3B82F6)
-                1 -> Color(0xFFF59E0B)
-                else -> Color(0xFF22C55E)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(dummyLanguage) { language ->
+                    LanguageRowItem(language)
+                }
             }
 
-            DetailBahasaScreen(
-                nomor = index + 1,
-                nama = item.nama,
-                deskripsi = item.deskripsi,
-                imageRes = item.imageRes,
-                accentColor = accent
-            )
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun HeaderTopBahasa() {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Top 3 Bahasa yang Sering Dipakai",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Belajar coding dari bahasa yang paling populer 🚀",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color(0xFF111827))
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
             Text(
-                text = "Cocok Untuk Pemula ✨",
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold
+                "Daftar Menu Lengkap",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
+        }
+
+        items(dummyLanguage) { language ->
+            DetailScreen(language)
         }
     }
 }
 
 @Composable
-fun DetailBahasaScreen(
-    nomor: Int,
-    nama: String,
-    deskripsi: String,
-    imageRes: Int,
-    accentColor: Color
-) {
+fun LanguageRowItem(language: Language) {
+    Card(
+        modifier = Modifier.width(160.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column {
+            Image(
+                painter = painterResource(language.imageRes),
+                contentDescription = language.nama,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(Modifier.padding(8.dp)) {
+                Text(
+                    language.nama,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(language.kategori)
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailScreen(language: Language) {
     var isFavorite by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
 
             Box {
                 Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = nama,
+                    painter = painterResource(language.imageRes),
+                    contentDescription = language.nama,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(170.dp),
+                        .height(200.dp),
                     contentScale = ContentScale.Crop
                 )
 
                 IconButton(
                     onClick = { isFavorite = !isFavorite },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Icon(
-                        imageVector = if (isFavorite) {
-                            Icons.Filled.Favorite
-                        } else {
-                            Icons.Outlined.FavoriteBorder
-                        },
-                        contentDescription = "Favorite Icon",
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
                         tint = if (isFavorite) Color.Red else Color.White
                     )
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                language.nama,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(language.deskripsi)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text("Kategori: ${language.kategori}")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(accentColor)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "#$nomor",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Text(
-                        text = nama,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = deskripsi,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF374151)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = { },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-                ) {
-                    Text(
-                        text = "Pelajari Sekarang",
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Text("Pelajari Sekarang")
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DaftarBahasaPreview() {
-    PrakTAM_2417051037Theme {
-        DaftarBahasaScreen()
     }
 }
