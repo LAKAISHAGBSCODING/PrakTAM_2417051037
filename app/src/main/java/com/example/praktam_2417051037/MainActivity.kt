@@ -1,3 +1,4 @@
+// MainActivity.kt
 package com.example.praktam_2417051037
 
 import android.os.Bundle
@@ -5,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,14 +24,31 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.praktam_2417051037.ui.theme.PraktiktamTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                BahasaApp()
+            PraktiktamTheme {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primary)
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                    )
+
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        BahasaApp()
+                    }
+                }
             }
         }
     }
@@ -43,52 +62,24 @@ data class Language(
 )
 
 val dummyLanguage = listOf(
-    Language(
-        "Kotlin",
-        "Bahasa modern untuk Android.",
-        "Mobile",
-        R.drawable.gambarcoding1
-    ),
-    Language(
-        "Java",
-        "Bahasa OOP populer.",
-        "Programming",
-        R.drawable.gambarcoding2
-    ),
-    Language(
-        "Python",
-        "Bahasa simpel untuk AI dan data.",
-        "General",
-        R.drawable.gambarcoding3
-    ),
-    Language(
-        "JavaScript",
-        "Untuk web interaktif.",
-        "Web",
-        R.drawable.gambarcoding1
-    ),
-    Language(
-        "C++",
-        "Untuk sistem dan game.",
-        "System",
-        R.drawable.gambarcoding2
-    )
+    Language("Kotlin", "Bahasa modern untuk Android.", "Mobile", R.drawable.gambarcoding1),
+    Language("Java", "Bahasa OOP populer.", "Programming", R.drawable.gambarcoding2),
+    Language("Python", "Bahasa simpel untuk AI dan data.", "General", R.drawable.gambarcoding3),
+    Language("JavaScript", "Untuk web interaktif.", "Web", R.drawable.gambarcoding1),
+    Language("C++", "Untuk sistem dan game.", "System", R.drawable.gambarcoding2)
 )
 
 @Composable
 fun BahasaApp() {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Text(
                 "Rekomendasi Populer",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLarge
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -105,8 +96,7 @@ fun BahasaApp() {
 
             Text(
                 "Daftar Menu Lengkap",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLarge
             )
         }
 
@@ -120,7 +110,10 @@ fun BahasaApp() {
 fun LanguageRowItem(language: Language) {
     Card(
         modifier = Modifier.width(160.dp),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column {
             Image(
@@ -135,9 +128,12 @@ fun LanguageRowItem(language: Language) {
             Column(Modifier.padding(8.dp)) {
                 Text(
                     language.nama,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium
                 )
-                Text(language.kategori)
+                Text(
+                    language.kategori,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
@@ -149,7 +145,10 @@ fun DetailScreen(language: Language) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(Modifier.padding(16.dp)) {
 
@@ -180,22 +179,33 @@ fun DetailScreen(language: Language) {
             Text(
                 language.nama,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                color = MaterialTheme.colorScheme.primary
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(language.deskripsi)
+            Text(
+                language.deskripsi,
+                style = MaterialTheme.typography.bodyMedium
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text("Kategori: ${language.kategori}")
+            Text(
+                "Kategori: ${language.kategori}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = { },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text("Pelajari Sekarang")
             }
