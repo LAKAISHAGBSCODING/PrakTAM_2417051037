@@ -12,18 +12,23 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +57,10 @@ import com.example.praktam_2417051037.ui.theme.PraktiktamTheme
 import com.example.praktam_2417051037.data.model.Language
 import com.example.praktam_2417051037.data.model.QuizData
 import com.example.praktam_2417051037.data.repository.LanguageRepository
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.net.URLDecoder
+import java.net.URLEncoder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,13 +87,12 @@ fun AppNavigation(navController: NavHostController) {
     var languageList by remember { mutableStateOf<List<Language>>(emptyList()) }
     var isLoadingData by remember { mutableStateOf(true) }
     var isError by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Ini memori sentral untuk menyimpan daftar bahasa favorit agar tidak hilang
     val favoriteSet = remember { mutableStateListOf<String>() }
-
     val repository = remember { LanguageRepository() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshTrigger) {
         isLoadingData = true
         isError = false
         try {
@@ -113,29 +122,55 @@ fun AppNavigation(navController: NavHostController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Error",
+                            tint = Color(0xFFFF6584),
+                            modifier = Modifier.size(100.dp)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
-                            text = "Yah, Datanya Gagal Dimuat 😢",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFF6584)
+                            text = "Oops! Koneksi Terputus 🔌",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFF2D3748)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Pastikan koneksi internet kamu menyala ya!",
+                            text = "Gagal memuat data kelas. Pastikan internetmu menyala atau tarik layar ke bawah untuk mencoba lagi!",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Color.Gray,
+                            color = Color(0xFF718096),
                             textAlign = TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(40.dp))
+                        Button(
+                            onClick = { refreshTrigger++ },
+                            modifier = Modifier.fillMaxWidth().height(64.dp),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                        ) {
+                            Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = Color.White)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("COBA LAGI", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             } else {
-                BahasaApp(navController, languageList, favoriteSet)
+                BahasaApp(
+                    navController = navController,
+                    languageList = languageList,
+                    favoriteSet = favoriteSet,
+                    onRefresh = { refreshTrigger++ }
+                )
             }
         }
 
         composable("detail/{nama}") { backStackEntry ->
-            val nama = backStackEntry.arguments?.getString("nama")
-            val language = languageList.find { it.nama == nama }
+            val rawNama = backStackEntry.arguments?.getString("nama") ?: ""
+            // Mendekode nama agar bahasa seperti "C#" terbaca dengan benar
+            val decodedNama = URLDecoder.decode(rawNama, "UTF-8")
+            val language = languageList.find { it.nama == decodedNama }
 
             if (language != null) {
                 DetailScreen(language = language, navController = navController, favoriteSet = favoriteSet)
@@ -143,61 +178,120 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         composable("quiz/{nama}") { backStackEntry ->
-            val nama = backStackEntry.arguments?.getString("nama") ?: ""
-            val language = languageList.find { it.nama == nama }
-            QuizScreen(nama = nama, imageUrl = language?.imageUrl ?: "", navController = navController)
+            val rawNama = backStackEntry.arguments?.getString("nama") ?: ""
+            val decodedNama = URLDecoder.decode(rawNama, "UTF-8")
+            val language = languageList.find { it.nama == decodedNama }
+            QuizScreen(nama = decodedNama, imageUrl = language?.imageUrl ?: "", navController = navController)
         }
     }
 }
 
 @Composable
-fun BahasaApp(navController: NavController, languageList: List<Language>, favoriteSet: List<String>) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        item {
-            Text(
-                "Misi Favorit Kamu! ⭐",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF333333),
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
+fun BahasaApp(
+    navController: NavController,
+    languageList: List<Language>,
+    favoriteSet: List<String>,
+    onRefresh: () -> Unit
+) {
+    val listState = rememberLazyListState()
+    var isPulling by remember { mutableStateOf(false) }
+    var pullOffset by remember { mutableFloatStateOf(0f) }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp)
-            ) {
-                items(languageList) { language ->
-                    LanguageRowItem(
-                        language = language,
-                        navController = navController,
-                        isFavorite = language.nama in favoriteSet
-                    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { isPulling = true },
+                    onDragEnd = {
+                        isPulling = false
+                        if (pullOffset > 150f) {
+                            onRefresh()
+                        }
+                        pullOffset = 0f
+                    }
+                ) { change, dragAmount ->
+                    // Hanya izinkan pull-to-refresh jika pengguna berada di paling atas daftar
+                    if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+                        if (dragAmount > 0 || pullOffset > 0) {
+                            pullOffset = (pullOffset + dragAmount).coerceIn(0f, 300f)
+                        }
+                    }
                 }
             }
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+            contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item {
+                Text(
+                    "Misi Favorit Kamu! ⭐",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF333333),
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                "Semua Kelas Coding 🚀",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                color = Color(0xFF333333),
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp)
+                ) {
+                    items(languageList) { language ->
+                        LanguageRowItem(
+                            language = language,
+                            navController = navController,
+                            isFavorite = language.nama in favoriteSet
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text(
+                    "Semua Kelas Coding 🚀",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF333333),
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+            }
+
+            items(languageList) { language ->
+                LanguageListItem(
+                    language = language,
+                    navController = navController,
+                    isFavorite = language.nama in favoriteSet
+                )
+            }
         }
 
-        items(languageList) { language ->
-            LanguageListItem(
-                language = language,
-                navController = navController,
-                isFavorite = language.nama in favoriteSet
-            )
+        // Indikator Pull-to-Refresh Kustom (Lebih stabil dari M3 default)
+        AnimatedVisibility(
+            visible = pullOffset > 0f,
+            enter = fadeIn() + slideInVertically { -it },
+            exit = fadeOut() + slideOutVertically { -it },
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 40.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color.White, CircleShape)
+                    .padding(8.dp)
+                    .offset(y = (pullOffset / 4).dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowDownward,
+                    contentDescription = "Tarik untuk Refresh",
+                    tint = Color(0xFF6C63FF),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -207,7 +301,10 @@ fun LanguageRowItem(language: Language, navController: NavController, isFavorite
     Card(
         modifier = Modifier
             .width(170.dp)
-            .clickable { navController.navigate("detail/${language.nama}") },
+            .clickable {
+                val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
+                navController.navigate("detail/$safeRoute")
+            },
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp, pressedElevation = 2.dp)
@@ -227,7 +324,6 @@ fun LanguageRowItem(language: Language, navController: NavController, isFavorite
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Indikator ikon Hati jika menjadi favorit
                 if (isFavorite) {
                     Icon(
                         imageVector = Icons.Filled.Favorite,
@@ -268,7 +364,10 @@ fun LanguageListItem(language: Language, navController: NavController, isFavorit
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .clickable { navController.navigate("detail/${language.nama}") },
+            .clickable {
+                val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
+                navController.navigate("detail/$safeRoute")
+            },
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp, pressedElevation = 2.dp)
@@ -315,7 +414,6 @@ fun LanguageListItem(language: Language, navController: NavController, isFavorit
                 }
             }
 
-            // Indikator Hati Besar di pinggir kanan jika favorit
             if (isFavorite) {
                 Icon(
                     imageVector = Icons.Filled.Favorite,
@@ -427,7 +525,10 @@ fun DetailScreen(language: Language, navController: NavController, favoriteSet: 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Button(
-                        onClick = { navController.navigate("quiz/${language.nama}") },
+                        onClick = {
+                            val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
+                            navController.navigate("quiz/$safeRoute")
+                        },
                         modifier = Modifier.fillMaxWidth().height(72.dp),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
@@ -470,11 +571,18 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
 
     if (currentQuiz == null || currentQuiz.kuis.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC)), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Yah, Kuis untuk $nama belum tersedia 🥺", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                Icon(Icons.Filled.Warning, contentDescription = "Kosong", modifier = Modifier.size(80.dp), tint = Color(0xFFFFB020))
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { navController.popBackStack() }, shape = CircleShape) {
-                    Text("Kembali", fontWeight = FontWeight.Bold)
+                Text("Yah, Kuis untuk $nama belum tersedia 🥺", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = { navController.popBackStack() },
+                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D3748))
+                ) {
+                    Text("Kembali", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
         }
@@ -567,7 +675,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                                         fontSize = 18.sp,
                                         lineHeight = 32.sp,
                                         color = Color(0xFF4A5568),
-                                        textAlign = TextAlign.Justify,
+                                        textAlign = TextAlign.Start, // Diubah menjadi rata kiri
                                         modifier = Modifier.padding(24.dp)
                                     )
                                 }
@@ -644,7 +752,13 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                         ) { targetIndex ->
                             val question = currentQuiz.kuis[targetIndex]
 
-                            Column(modifier = Modifier.fillMaxWidth()) {
+                            // Scroll view untuk membungkus Soal dan Pilihan jika layarnya kecil atau soalnya panjang
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(bottom = 32.dp)
+                            ) {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(32.dp),
@@ -676,14 +790,15 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                                                 screenState = "RESULT"
                                             }
                                         },
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).height(72.dp),
-                                        shape = CircleShape,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).heightIn(min = 72.dp),
+                                        shape = RoundedCornerShape(32.dp), // Berubah jadi kapsul dinamis agar teks muat
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = Color.White,
                                             contentColor = Color(0xFF4338CA)
                                         ),
                                         border = BorderStroke(3.dp, Color(0xFFE0E7FF)),
-                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp)
+                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 0.dp),
+                                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
                                     ) {
                                         Text(pilihanText, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
                                     }
@@ -694,7 +809,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                 }
                 "RESULT" -> {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
