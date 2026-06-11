@@ -576,7 +576,7 @@ fun DetailScreen(language: Language, navController: NavController, favoriteSet: 
                     color = Color(0xFFE0E7FF)
                 ) {
                     Text(
-                        text = "Kategori: ${language.kategori}",
+                        text = "Kategori : ${language.kategori}",
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
