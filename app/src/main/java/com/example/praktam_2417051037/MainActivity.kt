@@ -1,6 +1,7 @@
 package com.example.praktam_2417051037
 
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import androidx.activity.ComponentActivity
@@ -25,9 +26,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
@@ -59,8 +62,6 @@ import com.example.praktam_2417051037.data.model.QuizData
 import com.example.praktam_2417051037.data.repository.LanguageRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.net.URLDecoder
-import java.net.URLEncoder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,7 +131,7 @@ fun AppNavigation(navController: NavHostController) {
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(
-                            text = "Oops! Koneksi Terputus 🔌",
+                            text = "Oops! Koneksi Terputus \uD83D\uDD0C",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
                             color = Color(0xFF2D3748)
@@ -167,9 +168,7 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         composable("detail/{nama}") { backStackEntry ->
-            val rawNama = backStackEntry.arguments?.getString("nama") ?: ""
-            // Mendekode nama agar bahasa seperti "C#" terbaca dengan benar
-            val decodedNama = URLDecoder.decode(rawNama, "UTF-8")
+            val decodedNama = backStackEntry.arguments?.getString("nama") ?: ""
             val language = languageList.find { it.nama == decodedNama }
 
             if (language != null) {
@@ -178,8 +177,7 @@ fun AppNavigation(navController: NavHostController) {
         }
 
         composable("quiz/{nama}") { backStackEntry ->
-            val rawNama = backStackEntry.arguments?.getString("nama") ?: ""
-            val decodedNama = URLDecoder.decode(rawNama, "UTF-8")
+            val decodedNama = backStackEntry.arguments?.getString("nama") ?: ""
             val language = languageList.find { it.nama == decodedNama }
             QuizScreen(nama = decodedNama, imageUrl = language?.imageUrl ?: "", navController = navController)
         }
@@ -196,6 +194,12 @@ fun BahasaApp(
     val listState = rememberLazyListState()
     var isPulling by remember { mutableStateOf(false) }
     var pullOffset by remember { mutableFloatStateOf(0f) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredList = languageList.filter {
+        it.nama.contains(searchQuery, ignoreCase = true) ||
+                it.kategori.contains(searchQuery, ignoreCase = true)
+    }
 
     Box(
         modifier = Modifier
@@ -211,7 +215,6 @@ fun BahasaApp(
                         pullOffset = 0f
                     }
                 ) { change, dragAmount ->
-                    // Hanya izinkan pull-to-refresh jika pengguna berada di paling atas daftar
                     if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
                         if (dragAmount > 0 || pullOffset > 0) {
                             pullOffset = (pullOffset + dragAmount).coerceIn(0f, 300f)
@@ -222,55 +225,130 @@ fun BahasaApp(
     ) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars),
             contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item {
-                Text(
-                    "Misi Favorit Kamu! ⭐",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFF333333),
-                    modifier = Modifier.padding(horizontal = 24.dp)
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    placeholder = { Text("Mau belajar apa hari ini?", color = Color.Gray) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = Color.Gray) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Filled.Clear, contentDescription = "Hapus", tint = Color.Gray)
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color(0xFF6C63FF),
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedTextColor = Color(0xFF2D3748),
+                        unfocusedTextColor = Color(0xFF2D3748)
+                    ),
+                    singleLine = true
                 )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            if (searchQuery.isEmpty()) {
+                item {
+                    Text(
+                        "Kelas Favorit Kamu! ⭐",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF333333),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp)
-                ) {
-                    items(languageList) { language ->
-                        LanguageRowItem(
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp)
+                    ) {
+                        items(languageList) { language ->
+                            LanguageRowItem(
+                                language = language,
+                                navController = navController,
+                                isFavorite = language.nama in favoriteSet
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Text(
+                        "Semua Kelas Coding \uD83D\uDE80",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF333333),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+
+                items(languageList) { language ->
+                    LanguageListItem(
+                        language = language,
+                        navController = navController,
+                        isFavorite = language.nama in favoriteSet
+                    )
+                }
+            } else {
+                item {
+                    Text(
+                        "Hasil Pencarian \uD83D\uDD0E",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF333333),
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+
+                if (filteredList.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = "Tidak ditemukan",
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(80.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Kelas tidak ditemukan",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredList) { language ->
+                        LanguageListItem(
                             language = language,
                             navController = navController,
                             isFavorite = language.nama in favoriteSet
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    "Semua Kelas Coding 🚀",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = Color(0xFF333333),
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-            }
-
-            items(languageList) { language ->
-                LanguageListItem(
-                    language = language,
-                    navController = navController,
-                    isFavorite = language.nama in favoriteSet
-                )
             }
         }
 
-        // Indikator Pull-to-Refresh Kustom (Lebih stabil dari M3 default)
         AnimatedVisibility(
             visible = pullOffset > 0f,
             enter = fadeIn() + slideInVertically { -it },
@@ -302,7 +380,7 @@ fun LanguageRowItem(language: Language, navController: NavController, isFavorite
         modifier = Modifier
             .width(170.dp)
             .clickable {
-                val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
+                val safeRoute = Uri.encode(language.nama)
                 navController.navigate("detail/$safeRoute")
             },
         shape = RoundedCornerShape(28.dp),
@@ -365,7 +443,7 @@ fun LanguageListItem(language: Language, navController: NavController, isFavorit
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
             .clickable {
-                val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
+                val safeRoute = Uri.encode(language.nama)
                 navController.navigate("detail/$safeRoute")
             },
         shape = RoundedCornerShape(28.dp),
@@ -431,113 +509,109 @@ fun DetailScreen(language: Language, navController: NavController, favoriteSet: 
     val isFavorite = language.nama in favoriteSet
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8FAFC))) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp)
+                .background(Brush.verticalGradient(listOf(Color(0xFFDBEAFE), Color(0xFFEFF6FF))))
         ) {
-            Box(
+            SmartImage(
+                imageUrl = language.imageUrl,
+                contentDescription = language.nama,
+                modifier = Modifier.fillMaxSize().padding(60.dp)
+            )
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
-                    .background(Brush.verticalGradient(listOf(Color(0xFFDBEAFE), Color(0xFFEFF6FF))))
+                    .padding(top = 48.dp, start = 20.dp, end = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SmartImage(
-                    imageUrl = language.imageUrl,
-                    contentDescription = language.nama,
-                    modifier = Modifier.fillMaxSize().padding(60.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 48.dp, start = 20.dp, end = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.background(Color.White, CircleShape).size(48.dp)
                 ) {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.background(Color.White, CircleShape).size(48.dp)
-                    ) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF2D3748))
-                    }
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF2D3748))
+                }
 
-                    IconButton(
-                        onClick = {
-                            if (isFavorite) favoriteSet.remove(language.nama)
-                            else favoriteSet.add(language.nama)
-                        },
-                        modifier = Modifier.background(Color.White, CircleShape).size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) Color(0xFFFF6584) else Color.LightGray,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                IconButton(
+                    onClick = {
+                        if (isFavorite) favoriteSet.remove(language.nama)
+                        else favoriteSet.add(language.nama)
+                    },
+                    modifier = Modifier.background(Color.White, CircleShape).size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (isFavorite) Color(0xFFFF6584) else Color.LightGray,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
+        }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset(y = (-40).dp),
-                shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 280.dp),
+            shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp)
+                Text(
+                    text = language.nama,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Black,
+                    color = Color(0xFF2D3748)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFE0E7FF)
                 ) {
                     Text(
-                        text = language.nama,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Black,
-                        color = Color(0xFF2D3748)
+                        text = "Kategori: ${language.kategori}",
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF4338CA)
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFFE0E7FF)
-                    ) {
-                        Text(
-                            text = "Misi: ${language.kategori}",
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF4338CA)
-                        )
-                    }
+                Box(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = language.deskripsi,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 19.sp,
+                        lineHeight = 28.sp,
+                        color = Color(0xFF4A5568),
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    )
+                }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                    Box(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = language.deskripsi,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontSize = 19.sp,
-                            lineHeight = 28.sp,
-                            color = Color(0xFF4A5568),
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Button(
-                        onClick = {
-                            val safeRoute = URLEncoder.encode(language.nama, "UTF-8")
-                            navController.navigate("quiz/$safeRoute")
-                        },
-                        modifier = Modifier.fillMaxWidth().height(72.dp),
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 2.dp)
-                    ) {
-                        Text("MASUK KELAS SEKARANG!", fontSize = 18.sp, fontWeight = FontWeight.Black)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Icon(Icons.Filled.PlayArrow, contentDescription = "Play", modifier = Modifier.size(28.dp))
-                    }
+                Button(
+                    onClick = {
+                        val safeRoute = Uri.encode(language.nama)
+                        navController.navigate("quiz/$safeRoute")
+                    },
+                    modifier = Modifier.fillMaxWidth().height(72.dp),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 2.dp)
+                ) {
+                    Text("MASUK KELAS SEKARANG!", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(Icons.Filled.PlayArrow, contentDescription = "Play", modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -574,7 +648,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                 Icon(Icons.Filled.Warning, contentDescription = "Kosong", modifier = Modifier.size(80.dp), tint = Color(0xFFFFB020))
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Yah, Kuis untuk $nama belum tersedia 🥺", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("Yah, Kuis untuk $nama belum tersedia \uD83E\uDD7A", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = { navController.popBackStack() },
@@ -604,7 +678,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
             when (state) {
                 "MATERI" -> {
                     Column(
-                        modifier = Modifier.fillMaxSize().padding(24.dp).padding(top = 24.dp)
+                        modifier = Modifier.fillMaxSize().padding(16.dp).padding(top = 24.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -616,7 +690,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                             ) {
                                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF2D3748))
                             }
-                            Spacer(modifier = Modifier.width(20.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Text(
                                 text = "Materi $nama",
                                 fontSize = 24.sp,
@@ -625,26 +699,26 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         Card(
                             modifier = Modifier.fillMaxWidth().weight(1f),
-                            shape = RoundedCornerShape(40.dp),
+                            shape = RoundedCornerShape(32.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .verticalScroll(rememberScrollState())
-                                    .padding(32.dp),
+                                    .padding(horizontal = 20.dp, vertical = 24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(120.dp)
+                                        .size(100.dp)
                                         .background(Color(0xFFF1F5F9), CircleShape)
-                                        .padding(24.dp),
+                                        .padding(20.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     SmartImage(
@@ -654,35 +728,29 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(28.dp))
+                                Spacer(modifier = Modifier.height(24.dp))
 
                                 Text(
-                                    text = "Pengenalan Dasar 📖",
+                                    text = "Pengenalan Dasar \uD83D\uDCD6",
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFF6C63FF)
                                 )
 
-                                Spacer(modifier = Modifier.height(20.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
 
-                                Surface(
-                                    shape = RoundedCornerShape(24.dp),
-                                    color = Color(0xFFF8FAFC),
+                                Text(
+                                    text = currentQuiz.materi,
+                                    fontSize = 17.sp,
+                                    lineHeight = 28.sp,
+                                    color = Color(0xFF4A5568),
+                                    textAlign = TextAlign.Start,
                                     modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = currentQuiz.materi,
-                                        fontSize = 18.sp,
-                                        lineHeight = 32.sp,
-                                        color = Color(0xFF4A5568),
-                                        textAlign = TextAlign.Start, // Diubah menjadi rata kiri
-                                        modifier = Modifier.padding(24.dp)
-                                    )
-                                }
+                                )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
                         Button(
                             onClick = { screenState = "QUIZ" },
@@ -691,7 +759,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
                         ) {
-                            Text("SAYA SIAP UJIAN! 🎮", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            Text("SAYA SIAP UJIAN! \uD83C\uDFAE", fontSize = 18.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -752,7 +820,6 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                         ) { targetIndex ->
                             val question = currentQuiz.kuis[targetIndex]
 
-                            // Scroll view untuk membungkus Soal dan Pilihan jika layarnya kecil atau soalnya panjang
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -791,7 +858,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).heightIn(min = 72.dp),
-                                        shape = RoundedCornerShape(32.dp), // Berubah jadi kapsul dinamis agar teks muat
+                                        shape = RoundedCornerShape(32.dp),
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = Color.White,
                                             contentColor = Color(0xFF4338CA)
@@ -828,7 +895,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                         }
 
                         Spacer(modifier = Modifier.height(32.dp))
-                        Text("MISI SELESAI! 🎉", fontSize = 36.sp, fontWeight = FontWeight.Black, color = Color(0xFF2D3748))
+                        Text("MISI SELESAI! \uD83C\uDF89", fontSize = 36.sp, fontWeight = FontWeight.Black, color = Color(0xFF2D3748))
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Card(
@@ -841,7 +908,7 @@ fun QuizScreen(nama: String, imageUrl: String, navController: NavController) {
                                 modifier = Modifier.padding(40.dp).fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Skor Akhir Kamu 🏆", fontSize = 20.sp, color = Color(0xFF6C63FF), fontWeight = FontWeight.Black)
+                                Text("Skor Akhir Kamu \uD83C\uDFC6", fontSize = 20.sp, color = Color(0xFF6C63FF), fontWeight = FontWeight.Black)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("${score * 20}", fontSize = 96.sp, fontWeight = FontWeight.Black, color = Color(0xFFFFB020))
                                 Spacer(modifier = Modifier.height(8.dp))
